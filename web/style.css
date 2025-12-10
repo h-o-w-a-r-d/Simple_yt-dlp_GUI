@@ -1,0 +1,67 @@
+:root {
+    --bg-main: #1e1e2e;
+    --bg-card: #252535;
+    --primary: #cba6f7;
+    --secondary: #89b4fa;
+    --text: #cdd6f4;
+    --danger: #f38ba8;
+    --warning: #f9e2af;
+    --success: #a6e3a1;
+}
+
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text);
+    user-select: none;
+}
+
+.app-container { max-width: 900px; margin: 0 auto; padding: 20px; }
+
+header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+h1 { margin: 0; font-size: 24px; color: var(--primary); }
+.badge { background: var(--secondary); color: #1e1e2e; padding: 2px 8px; border-radius: 4px; font-size: 12px; vertical-align: middle; }
+
+.icon-btn { background: none; border: 1px solid var(--text); color: var(--text); padding: 5px 10px; border-radius: 5px; cursor: pointer; transition: 0.2s; }
+.icon-btn:hover { background: var(--text); color: var(--bg-main); }
+
+.settings-panel { background: #181825; padding: 15px; border-radius: 8px; border: 1px solid var(--secondary); margin-bottom: 20px; }
+.hidden { display: none !important; }
+
+.setting-row { margin-bottom: 10px; }
+.setting-row label { display: block; margin-bottom: 5px; font-size: 14px; }
+.input-with-btn { display: flex; gap: 10px; }
+.input-with-btn input { flex: 1; background: #313244; border: none; color: white; padding: 8px; border-radius: 4px; }
+.input-with-btn button, .save-btn { background: var(--secondary); border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+.save-btn { width: 100%; margin-top: 10px; background: var(--success); color: #1e1e2e; }
+
+.input-section { position: relative; margin-bottom: 20px; }
+#urlInput { width: 100%; padding: 15px; font-size: 16px; background: #313244; border: 2px solid transparent; color: white; border-radius: 8px; box-sizing: border-box; transition: 0.3s; }
+#urlInput:focus { border-color: var(--primary); outline: none; }
+.platform-badge { position: absolute; right: 10px; top: 12px; background: var(--bg-main); padding: 4px 8px; border-radius: 4px; font-size: 12px; border: 1px solid var(--text); }
+
+.warning-box { background: rgba(243, 139, 168, 0.2); border: 1px solid var(--danger); color: var(--danger); padding: 10px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
+
+.options-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+.option-card { cursor: pointer; }
+.option-card input { display: none; }
+.card-content { background: var(--bg-card); padding: 15px; border-radius: 8px; height: 100%; border: 2px solid transparent; transition: 0.2s; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.option-card input:checked + .card-content { border-color: var(--primary); background: #313244; }
+
+.icon { font-size: 24px; margin-bottom: 5px; }
+.title { font-weight: bold; margin-bottom: 5px; }
+.desc { font-size: 12px; color: #a6adc8; }
+
+.sub-options { margin-top: 10px; text-align: left; width: 100%; font-size: 13px; border-top: 1px solid #45475a; padding-top: 8px; }
+.sub-options select { width: 100%; background: #1e1e2e; color: white; border: 1px solid #45475a; padding: 4px; margin-bottom: 5px; border-radius: 4px; }
+.sub-options label { display: block; margin-top: 4px; }
+
+.action-btn { width: 100%; padding: 15px; background: var(--primary); color: #1e1e2e; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+.action-btn:hover { opacity: 0.9; transform: translateY(-2px); }
+
+.status-panel { margin-top: 20px; background: #11111b; padding: 15px; border-radius: 8px; }
+.progress-bar-container { height: 8px; background: #313244; border-radius: 4px; overflow: hidden; margin-bottom: 10px; }
+.progress-bar { height: 100%; width: 0%; background: var(--success); transition: width 0.3s; }
+.status-text { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 10px; }
+.log-console { height: 120px; overflow-y: auto; font-family: monospace; font-size: 12px; color: #a6adc8; white-space: pre-wrap; }
