@@ -4,6 +4,8 @@
 ![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
 ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 
+<!-- Keywords: yt-dlp gui, video downloader, youtube downloader, bilibili downloader, twitch downloader, python, ffmpeg, mp3 converter, audio extraction, windows, macos, linux, B站下載, 影片下載神器, 直播錄影 -->
+
 **Simple yt-dlp GUI** 是一個基於 Python 與 Eel 開發的現代化影音下載工具。它整合了 `yt-dlp` 強大的核心，並提供直覺的圖形介面 (GUI)，支援 YouTube、Bilibili、Twitch 等主流平台的高畫質影片、純音訊、封面與 Metadata 下載。
 
 ![Screenshot](https://raw.githubusercontent.com/h-o-w-a-r-d/Simple_yt-dlp_GUI/refs/heads/main/screenshot/screenshot.png)
