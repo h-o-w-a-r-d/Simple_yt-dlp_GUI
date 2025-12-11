@@ -43,17 +43,119 @@ h1 { margin: 0; font-size: 24px; color: var(--primary); }
 
 .warning-box { background: rgba(243, 139, 168, 0.2); border: 1px solid var(--danger); color: var(--danger); padding: 10px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
 
-.options-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
-.option-card { cursor: pointer; }
-.option-card input { display: none; }
-.card-content { background: var(--bg-card); padding: 15px; border-radius: 8px; height: 100%; border: 2px solid transparent; transition: 0.2s; display: flex; flex-direction: column; align-items: center; text-align: center; }
-.option-card input:checked + .card-content { border-color: var(--primary); background: #313244; }
+.options-grid { 
+    display: grid; 
+    grid-template-columns: repeat(4, 1fr); 
+    gap: 15px; 
+    margin-bottom: 20px; 
+    
+    /* 1. 確保 Grid 的每一列高度都跟隨最高的那個項目 (這步其實你原本可能有做) */
+    align-items: stretch; 
+}
+.option-card {
+    /* 2. 這是關鍵！label 標籤預設不會自動填滿 Grid 格子的高度 */
+    /* 我們必須強制它變成 flex 容器，並且高度設為 100% */
+    display: flex;
+    flex-direction: column;
+    height: 100%; 
+    position: relative; /* 確保定位正常 */
+}
+/* 隱藏原本的 radio 按鈕 */
+.option-card input {
+    display: none;
+}
 
+
+.card-content { 
+    background: var(--bg-card); 
+    padding: 20px 15px; 
+    border-radius: 8px; 
+    
+    /* --- 核心修改開始 --- */
+    
+    /* 1. 將高度寫死 (Fixed Height) */
+    /* 這裡設定 280px 是預估展開後的高度，你可以依據螢幕大小自己微調數字 */
+    /* 這樣設定後，格子一開始就會很高，展開選項時只是填滿空白，不會推擠下方 */
+    height: 280px;  
+    
+    /* 2. 確保內容靠上對齊 */
+    display: flex; 
+    flex-direction: column; 
+    justify-content: flex-start; /* 內容置頂 */
+    align-items: center; 
+    
+    /* 3. 防止萬一內容超過 280px 時破版，讓他可以內部捲動 (通常用不到) */
+    overflow-y: auto; 
+    
+    /* --- 核心修改結束 --- */
+
+    border: 2px solid transparent; 
+    transition: border-color 0.2s ease, background 0.2s ease; /* 移除 height 的動畫，因為高度固定了 */
+    
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 優化捲軸樣式 (避免如果真的出現捲軸時太醜) */
+.card-content::-webkit-scrollbar {
+    width: 4px;
+}
+.card-content::-webkit-scrollbar-thumb {
+    background: #45475a;
+    border-radius: 2px;
+}
+
+
+/* 當被選中時的樣式 */
+.option-card input:checked + .card-content {
+    border-color: var(--primary);
+    background: #313244;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
 .icon { font-size: 24px; margin-bottom: 5px; }
 .title { font-weight: bold; margin-bottom: 5px; }
 .desc { font-size: 12px; color: #a6adc8; }
 
-.sub-options { margin-top: 10px; text-align: left; width: 100%; font-size: 13px; border-top: 1px solid #45475a; padding-top: 8px; }
+/* Icon 和標題的間距微調，確保靠上時好看 */
+.card-content .icon {
+    font-size: 28px;
+    margin-bottom: 10px;
+    margin-top: 5px; /* 上方留點空間 */
+}
+
+.card-content .title {
+    font-weight: bold;
+    margin-bottom: 5px;
+    font-size: 16px;
+}
+
+/* 子選項區域 */
+.sub-options {
+    margin-top: 15px; /* 與標題拉開距離 */
+    text-align: left;
+    width: 100%;
+    font-size: 13px;
+    
+    /* 增加一條分隔線，讓視覺更清楚 */
+    border-top: 1px solid rgba(255, 255, 255, 0.1); 
+    padding-top: 10px;
+    
+    /* 確保子選項出現時有淡入動畫 */
+    animation: fadeIn 0.3s ease;
+}
+
+/* 定義淡入動畫 */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 讓隱藏真的消失，不佔位 */
+.hidden {
+    display: none !important;
+}
+
+
 .sub-options select { width: 100%; background: #1e1e2e; color: white; border: 1px solid #45475a; padding: 4px; margin-bottom: 5px; border-radius: 4px; }
 .sub-options label { display: block; margin-top: 4px; }
 
@@ -63,5 +165,44 @@ h1 { margin: 0; font-size: 24px; color: var(--primary); }
 .status-panel { margin-top: 20px; background: #11111b; padding: 15px; border-radius: 8px; }
 .progress-bar-container { height: 8px; background: #313244; border-radius: 4px; overflow: hidden; margin-bottom: 10px; }
 .progress-bar { height: 100%; width: 0%; background: var(--success); transition: width 0.3s; }
-.status-text { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 10px; }
-.log-console { height: 120px; overflow-y: auto; font-family: monospace; font-size: 12px; color: #a6adc8; white-space: pre-wrap; }
+.status-text { 
+    display: flex; 
+    justify-content: space-between; 
+    font-size: 14px; 
+    margin-bottom: 10px;
+    /* 新增: 固定高度，防止文字換行時推擠版面 */
+    height: 20px; 
+    overflow: hidden; 
+}
+
+/* 新增: 針對文字做截斷處理 */
+.status-text span {
+    white-space: nowrap;      /* 強制不換行 */
+    overflow: hidden;         /* 超出隱藏 */
+    text-overflow: ellipsis;  /* 超出顯示 ... */
+}
+
+/* 特別針對左邊的訊息欄位 (statusMsg) */
+#statusMsg {
+    max-width: 85%; /* 限制最大寬度，留空間給右邊的 % 數 */
+    display: block;
+}
+
+/* 右邊的百分比 */
+#percentNum {
+    min-width: 45px;
+    text-align: right;
+    font-weight: bold;
+}
+
+.log-console { 
+    flex-grow: 1; /* 填滿剩餘空間 */
+    overflow-y: auto; 
+    font-family: monospace; 
+    font-size: 12px; 
+    color: #a6adc8; 
+    white-space: pre-wrap; 
+    background: #0d0d15; /* 稍微深一點的背景區分 */
+    padding: 8px;
+    border-radius: 4px;
+}
