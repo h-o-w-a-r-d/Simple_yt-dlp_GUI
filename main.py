@@ -138,8 +138,8 @@ def analyze_url(url):
     return result
 
 class MyLogger:
-    def debug(self, msg): pass
-    def info(self, msg): pass
+    def debug(self, msg): print(msg) # 暫時開啟 debug 看詳細 logs
+    def info(self, msg): print(msg)
     def warning(self, msg): log_to_frontend(f"警告: {msg}", "warn")
     def error(self, msg): log_to_frontend(f"錯誤: {msg}", "error")
 
@@ -174,26 +174,45 @@ def _download_worker(url, options):
 
     log_to_frontend(f"啟動萬能引擎: {url}", "info")
     
-    # --- yt-dlp 基礎設定 ---
+    # --- 1. 初始化 PostProcessors 列表 ---
+    # 這是關鍵，我們要把所有處理動作按順序排隊
+    post_processors = []
+
+    # --- 2. yt-dlp 基礎設定 ---
     ydl_opts = {
         'ffmpeg_location': ffmpeg_path,
         'logger': MyLogger(),
         'progress_hooks': [progress_hook],
-        # 檔名模板: [作者] 標題 [ID].副檔名
         'outtmpl': os.path.join(output_dir, '[%(uploader)s] %(title)s [%(id)s].%(ext)s'),
         'retries': cfg['advanced']['retries'],
         'fragment_retries': cfg['advanced']['fragment_retries'],
         'user_agent': cfg['advanced']['user_agent'],
-        # 允許下載播放列表(視需求而定，目前設為 False 避免誤下整個頻道)
         'noplaylist': True,
-        'writethumbnail': False, # 預設關閉，由下面邏輯控制
+        'writethumbnail': False, 
     }
 
-    # --- 模式邏輯配置 ---
+    # --- 3. 處理封面與 Metadata (通用邏輯) ---
+    if options.get('embed_cover'):
+        ydl_opts['writethumbnail'] = True
+        # A. 強制將封面轉為 jpg (MP4 必須是 jpg 才能嵌入)
+        post_processors.append({
+            'key': 'FFmpegThumbnailsConvertor',
+            'format': 'jpg',
+        })
+        # B. 加入嵌入封面的動作
+        post_processors.append({'key': 'EmbedThumbnail'})
+    
+    if options.get('embed_meta'):
+        # 加入嵌入 Metadata 的動作
+        post_processors.append({
+            'key': 'FFmpegMetadata',
+            'add_metadata': True,
+        })
+
+    # --- 4. 根據模式配置格式 ---
     try:
-        # 1. 影片模式 (Video)
+        # 1. 影片模式
         if mode == 'video':
-            # 畫質設定
             quality_map = {
                 'best': "bestvideo+bestaudio/best",
                 '4k': "bestvideo[height<=2160]+bestaudio/best[height<=2160]",
@@ -201,47 +220,23 @@ def _download_worker(url, options):
                 '720': "bestvideo[height<=720]+bestaudio/best[height<=720]"
             }
             ydl_opts['format'] = quality_map.get(options['video_quality'], 'bestvideo+bestaudio/best')
-            
-            # 格式轉換: 強制合併為指定容器 (mp4, mkv, mov, etc.)
             ydl_opts['merge_output_format'] = options['video_ext']
-            
-            # 嵌入設定
-            if options['embed_cover']:
-                ydl_opts['writethumbnail'] = True
-                ydl_opts['embedthumbnail'] = True
-            
-            if options['embed_meta']:
-                ydl_opts['addmetadata'] = True
 
-        # 2. 音訊模式 (Audio)
+        # 2. 音訊模式
         elif mode == 'audio':
             ydl_opts['format'] = 'bestaudio/best'
-            
-            # 透過 PostProcessor 轉檔
-            post_processors = [{
+            # 音訊轉檔處理器必須排在最前面 (index 0)
+            post_processors.insert(0, {
                 'key': 'FFmpegExtractAudio',
-                'preferredcodec': options['audio_ext'], # mp3, m4a, flac, wav, opus
+                'preferredcodec': options['audio_ext'],
                 'preferredquality': options['audio_quality'],
-            }]
-            
-            # 音訊嵌入封面 (需先下載封面 -> 嵌入 -> 轉檔)
-            if options['embed_cover']:
-                ydl_opts['writethumbnail'] = True
-                post_processors.append({'key': 'EmbedThumbnail'})
-            
-            # 音訊嵌入 Metadata
-            if options['embed_meta']:
-                ydl_opts['addmetadata'] = True
-                post_processors.append({'key': 'FFmpegMetadata'})
-            
-            ydl_opts['postprocessors'] = post_processors
+            })
 
-        # 3. 純封面模式 (Cover)
+        # 3. 純封面模式
         elif mode == 'cover':
             ydl_opts['skip_download'] = True
             ydl_opts['writethumbnail'] = True
-            # 轉換封面格式 (jpg, png, webp)
-            ydl_opts['postprocessors'] = [{
+            post_processors = [{
                 'key': 'FFmpegThumbnailsConvertor',
                 'format': options['image_ext'], 
                 'when': 'before_dl' 
@@ -252,17 +247,70 @@ def _download_worker(url, options):
             ydl_opts['skip_download'] = True
             ydl_opts['writeinfojson'] = True
 
-        # 直播模式處理
+        # --- 5. 整合處理器 ---
+        if post_processors:
+            # 如果是音訊且格式是 opus，我們過濾掉 FFmpegMetadata 
+            # 因為 yt-dlp 的 FFmpegExtractAudio 通常已經處理好基礎標籤了
+            if mode == 'audio' and options.get('audio_ext') == 'opus':
+                post_processors = [pp for pp in post_processors if pp['key'] != 'FFmpegMetadata']
+            
+            ydl_opts['postprocessors'] = post_processors
+
+        # 直播模式額外處理
         if options.get('is_live_mode'):
             log_to_frontend("⚠️ 啟動直播錄製 (DVR) 模式", "warn")
             ydl_opts['live_from_start'] = True
-            # 直播通常不建議即時嵌入，容易造成壞檔
+            # 如果是直播，強制移除嵌入封面動作（直播流極易損壞）
             if mode == 'video':
-                ydl_opts.pop('embedthumbnail', None)
+                ydl_opts['postprocessors'] = [pp for pp in post_processors if pp['key'] != 'EmbedThumbnail']
 
-        # --- 執行下載 ---
+        # --- 6. 執行下載 ---
         with YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
+            # extract_info 會觸發下載，並回傳影片資訊
+            info = ydl.extract_info(url, download=True)
+            filename = ydl.prepare_filename(info)
+            # 取得最終輸出的副檔名路徑
+            final_path = os.path.splitext(filename)[0] + "." + options['audio_ext']
+            # 取得封面路徑 (yt-dlp 下載的封面通常在 filename 同一個位置，且轉成 .jpg 了)
+            thumbnail_path = os.path.splitext(filename)[0] + ".jpg"
+
+        # --- 7. 針對 Opus 的 Mutagen 補救計畫 (標籤 + 封面) ---
+        if mode == 'audio' and options.get('audio_ext') == 'opus':
+            try:
+                from mutagen.oggopus import OggOpus
+                from mutagen.flac import Picture
+                import base64
+
+                audio = OggOpus(final_path)
+
+                # 寫入文字標籤
+                if options.get('embed_meta'):
+                    audio["title"] = info.get("title", "")
+                    audio["artist"] = info.get("uploader", "")
+                    audio["date"] = info.get("upload_date", "")
+                    audio["comment"] = f"URL: {url}"
+
+                # 寫入封面圖片
+                if options.get('embed_cover') and os.path.exists(thumbnail_path):
+                    pic = Picture()
+                    with open(thumbnail_path, "rb") as f:
+                        pic.data = f.read()
+                    pic.type = 3  # Front Cover
+                    pic.mime = "image/jpeg"
+                    pic.desc = "front cover"
+                    
+                    # Opus 存放圖片的方式比較特別，需要編碼成 string
+                    picture_data = base64.b64encode(pic.write()).decode('ascii')
+                    audio["metadata_block_picture"] = [picture_data]
+
+                audio.save()
+                log_to_frontend("🎨 已透過 Mutagen 嵌入封面與標籤 (Opus 專用)", "success")
+
+                # 清理暫存的 jpg 封面檔 (選配)
+                # if os.path.exists(thumbnail_path): os.remove(thumbnail_path)
+
+            except Exception as e:
+                log_to_frontend(f"⚠️ Mutagen 處理失敗: {e}", "warn")
         
         log_to_frontend("✅ 任務執行完畢", "success")
         eel.update_progress(100, "完成")
